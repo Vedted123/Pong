@@ -1,7 +1,5 @@
-CSS PEER
 
-
-
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
 body {
   font-family: 'Poppins', sans-serif;
@@ -119,13 +117,3 @@ th {
   display: none;
 }
 
-#notificationBanner {
-  background: #fff3cd;
-  color: #856404;
-  padding: 12px;
-  border: 1px solid #ffeeba;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  text-align: center;
-  font-weight: 600;
-}
