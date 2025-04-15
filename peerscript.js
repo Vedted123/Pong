@@ -147,16 +147,21 @@ const firebaseConfig = {
   }
   
   function renderMatches(data) {
-    const list = document.getElementById("matchedList");
-    list.innerHTML = '';
-    for (let id in data) {
-      const m = data[id];
-      const row = "<tr>" +
-        "<td>" + m.seekerName + "</td><td>" + m.subject + "</td><td>" + m.seekerGrade + "</td>" +
-        "<td>" + m.tutorName + "</td><td>" + m.tutorGrade + "</td>" +
-        "<td><a href='chat.html?matchId=" + id + "'><button>Chat</button></a></td>" +
-        "</tr>";
-      list.innerHTML += row;
-    }
+  const list = document.getElementById("matchedList");
+  list.innerHTML = '';
+  for (let id in data) {
+    const m = data[id];
+    const row = "<tr>" +
+      "<td>" + m.seekerName + "</td><td>" + m.subject + "</td><td>" + m.seekerGrade + "</td>" +
+      "<td>" + m.tutorName + "</td><td>" + m.tutorGrade + "</td>" +
+      "<td><button onclick='startChat(" + JSON.stringify(m).replace(/'/g, "\\'") + ")'>Chat</button></td>" +
+      "</tr>";
+    list.innerHTML += row;
   }
-  
+}
+
+function startChat(match) {
+  localStorage.setItem('seeker', match.seekerName);
+  localStorage.setItem('provider', match.tutorName);
+  window.location.href = 'peerchat.html';
+}
