@@ -1,3 +1,4 @@
+// Firebase setup
 const firebaseConfig = {
   apiKey: "AIzaSyA9xmlbnn98hTKfWi5Of0OKHfy-nppTLNk",
   authDomain: "peer-2bd22.firebaseapp.com",
@@ -15,23 +16,19 @@ let currentUser = null;
 let username = null;
 
 function emailify(name) {
-  return name + "@peerapp.com";
+  return `${name}@peerapp.com`;
 }
 
 function login() {
   username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(emailify(username), password)
-      .then(() => localStorage.setItem("username", username))
-      .catch(e => alert(e.message));
+  auth.signInWithEmailAndPassword(emailify(username), password).catch(e => alert(e.message));
 }
 
 function signup() {
   username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(emailify(username), password)
-      .then(() => localStorage.setItem("username", username))
-      .catch(e => alert(e.message));
+  auth.createUserWithEmailAndPassword(emailify(username), password).catch(e => alert(e.message));
 }
 
 function logout() {
@@ -42,7 +39,6 @@ auth.onAuthStateChanged(user => {
   if (user) {
     currentUser = user;
     username = user.email.split("@")[0];
-    localStorage.setItem("username", username);
     document.getElementById("authBox").classList.add("hide");
     document.getElementById("mainApp").classList.remove("hide");
     document.getElementById("displayUsername").textContent = username;
@@ -67,7 +63,10 @@ function registerTutor() {
   const grade = parseFloat(document.getElementById("tutorGrade").value);
   if (subject && !isNaN(grade)) {
     const id = db.ref("tutors").push().key;
-    db.ref("tutors/" + id).set({ username: username, subject: subject, grade: grade });
+    db.ref("tutors/" + id).set({ username, subject, grade });
+    document.getElementById("tutorSubject").value = '';
+    document.getElementById("tutorOther").value = '';
+    document.getElementById("tutorGrade").value = '';
   }
 }
 
@@ -76,11 +75,70 @@ function registerSeeker() {
   const grade = parseFloat(document.getElementById("seekerGrade").value);
   if (subject && !isNaN(grade)) {
     const id = db.ref("seekers").push().key;
-    db.ref("seekers/" + id).set({ username: username, subject: subject, grade: grade });
+    db.ref("seekers/" + id).set({ username, subject, grade });
+    document.getElementById("seekerSubject").value = '';
+    document.getElementById("seekerOther").value = '';
+    document.getElementById("seekerGrade").value = '';
   }
 }
 
+function matchSeeker(id, seeker) {
+  db.ref("tutors").once("value", snap => {
+    const tutors = snap.val();
+    if (tutors) {
+      const eligible = Object.entries(tutors).filter(([key, tutor]) =>
+        tutor.subject.toLowerCase() === seeker.subject.toLowerCase() &&
+        Math.abs(tutor.grade - seeker.grade) <= 3
+      );
+
+      if (eligible.length > 0) {
+        eligible.sort((a, b) =>
+          Math.abs(a[1].grade - seeker.grade) - Math.abs(b[1].grade - seeker.grade)
+        );
+
+        const [matchKey, matchTutor] = eligible[0];
+
+        const matchId = db.ref("matches").push().key;
+        db.ref("matches/" + matchId).set({
+          seekerName: seeker.username,
+          tutorName: matchTutor.username,
+          subject: seeker.subject,
+          seekerGrade: seeker.grade,
+          tutorGrade: matchTutor.grade
+        });
+
+        db.ref("seekers/" + id).remove();
+        db.ref("tutors/" + matchKey).remove();
+
+        document.getElementById("matchMessage").textContent =
+          `"${seeker.username}" matched with "${matchTutor.username}" successfully for "${seeker.subject}"`;
+      } else {
+        document.getElementById("matchMessage").textContent =
+          `❌ No tutor found within 3 grades for "${seeker.subject}"`;
+      }
+    }
+  });
+}
+
 function syncData() {
+  db.ref("tutors").on("value", snap => {
+    const data = snap.val() || {};
+    document.getElementById("tutorList").innerHTML = Object.values(data).map(t => `
+      <tr><td>${t.username}</td><td>${t.subject}</td><td>${t.grade}</td></tr>`).join('');
+  });
+
+  db.ref("seekers").on("value", snap => {
+    const data = snap.val() || {};
+    const list = Object.entries(data).map(([id, s]) => {
+      const show = s.username === username;
+      return `<tr>
+        <td>${s.username}</td><td>${s.subject}</td><td>${s.grade}</td>
+        <td>${show ? `<button onclick='matchSeeker("${id}", ${JSON.stringify(s)})'>Match Me</button>` : ""}</td>
+      </tr>`;
+    });
+    document.getElementById("seekerList").innerHTML = list.join('');
+  });
+
   db.ref("matches").on("value", snap => {
     const data = snap.val() || {};
     renderMatches(data);
@@ -92,11 +150,12 @@ function renderMatches(data) {
   list.innerHTML = '';
   for (let id in data) {
     const m = data[id];
-    const row = "<tr>" +
-      "<td>" + m.seekerName + "</td><td>" + m.subject + "</td><td>" + m.seekerGrade + "</td>" +
-      "<td>" + m.tutorName + "</td><td>" + m.tutorGrade + "</td>" +
-      "<td><a href='peerchat.html'><button>Chat</button></a></td>" +
-      "</tr>";
-    list.innerHTML += row;
+    list.innerHTML += `<tr>
+      <td>${m.seekerName}</td><td>${m.subject}</td><td>${m.seekerGrade}</td>
+      <td>${m.tutorName}</td><td>${m.tutorGrade}</td>
+      <td>
+        <a href="chat.html?matchId=${id}"><button>Chat</button></a>
+      </td>
+    </tr>`;
   }
 }
