@@ -120,6 +120,27 @@
     };
   }
 </script>
+  <script>
+  const seeker = localStorage.getItem('seeker');
+  const provider = localStorage.getItem('provider');
+
+  if (seeker && provider) {
+    document.body.innerHTML = `
+      <h2>💬 Chat Room</h2>
+      <p><strong>${seeker}</strong> is chatting with <strong>${provider}</strong></p>
+      <div id="chatBox">
+        <!-- Chat messages go here -->
+      </div>
+    `;
+  } else {
+    document.body.innerHTML = `
+      <h2 style="color:#e74c3c;">❌ Match not found.</h2>
+      <p>Please go back and select a tutor and seeker.</p>
+      <a href="index.html">Return to Home</a>
+    `;
+  }
+</script>
+
 
 </body>
 </html>
