@@ -1,56 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Peer Chat</title>
+  <title>Peer Tutor Chat</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f2f5;
+      background: #f4f4f4;
       padding: 20px;
     }
+
+    h2 {
+      color: #333;
+    }
+
     #chatBox {
-      height: 300px;
-      overflow-y: scroll;
-      background: white;
+      height: 300px;              
+      overflow-y: auto;
       border: 1px solid #ccc;
-      border-radius: 8px;
       padding: 10px;
+      background: #fff;
       margin-bottom: 10px;
-    }
-    .msg {
-      margin: 5px 0;
-    }
-    .me {
-      font-weight: bold;
-      color: #2c3e50;
-    }
-    .other {
-      color: #555;
-    }
-    input, button {
-      padding: 10px;
-      font-size: 14px;
       border-radius: 6px;
-      border: 1px solid #ccc;
+      font-size: 16px;
+      line-height: 1.5;
     }
+
+
+    input {
+      padding: 10px;
+      width: 70%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
     button {
-      background-color: #4caf50;
+      padding: 10px 16px;
+      background-color: #007bff;
       color: white;
       border: none;
+      border-radius: 4px;
       cursor: pointer;
     }
+
     button:hover {
-      background-color: #45a049;
+      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
-
-<h2>Peer Tutor Chat Room</h2>
-<div id="chatContainer">Loading chat...</div>
 
 <script>
   const firebaseConfig = {
@@ -67,76 +67,58 @@
   const db = firebase.database();
   const auth = firebase.auth();
 
-  const container = document.getElementById('chatContainer');
-
   auth.onAuthStateChanged(user => {
-    if (!user) {
-      container.innerHTML = `
-        <p>You must be logged in to access the chat.</p>
-        <a href="index.html">Go to login</a>
-      `;
-      return;
-    }
+    if (user) {
+      const username = user.email.split("@")[0];
+      const matchId = new URLSearchParams(window.location.search).get("matchId");
 
-    const currentUser = user.email.split("@")[0];
-
-    db.ref("matches").once("value").then(snapshot => {
-      const matches = snapshot.val() || {};
-      let matchData = null;
-
-      for (let id in matches) {
-        const m = matches[id];
-        if (m.seekerName === currentUser || m.tutorName === currentUser) {
-          matchData = m;
-          break;
+      db.ref("matches/" + matchId).once("value").then(snapshot => {
+        const match = snapshot.val();
+        if (!match) {
+          document.body.innerHTML = "<h2>❌ Match not found.</h2>";
+          return;
         }
-      }
 
-      if (!matchData) {
-        container.innerHTML = `
-          <p>❌ No valid match found for <strong>${currentUser}</strong>.</p>
-          <a href="index.html">Return to home</a>
-        `;
-        return;
-      }
-
-      const chatId = `${matchData.seekerName}_${matchData.tutorName}`.replace(/\s+/g, '_');
-      container.innerHTML = `
-        <p>Chat between <strong>${matchData.seekerName}</strong> and <strong>${matchData.tutorName}</strong>. You are <strong>${currentUser}</strong>.</p>
-        <div id="chatBox"></div>
-        <input type="text" id="msgInput" placeholder="Type a message..." />
-        <button onclick="sendMessage()">Send</button>
-      `;
-
-      const chatBox = document.getElementById('chatBox');
-
-      db.ref("chats/" + chatId).on("child_added", snap => {
-        const msg = snap.val();
-        const div = document.createElement('div');
-        div.classList.add('msg');
-        if (msg.sender === currentUser) {
-          div.innerHTML = `<span class="me">You:</span> ${msg.text}`;
-        } else {
-          div.innerHTML = `<span class="other">${msg.sender}:</span> ${msg.text}`;
+        if (match.tutorName !== username && match.seekerName !== username) {
+          document.body.innerHTML = "<h2>🚫 You are not part of this match. Access denied. Click back arrow to return to home.</h2>";
+          return;
         }
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
+
+        loadChat(matchId, username);
       });
-
-      window.sendMessage = function () {
-        const input = document.getElementById('msgInput');
-        const text = input.value.trim();
-        if (text) {
-          db.ref("chats/" + chatId).push({
-            sender: currentUser,
-            text: text,
-            timestamp: Date.now()
-          });
-          input.value = '';
-        }
-      };
-    });
+    } else {
+      window.location.href = "index.html";
+    }
   });
+
+  function loadChat(matchId, username) {
+    document.body.innerHTML = `
+      <button onclick="window.location.href='index.html'">🏠 Return to Home</button>
+      <h2>Chat With Your Tutor Or Student!!!</h2>
+      <div id="chatBox"></div>
+      <input id="chatInput" placeholder="Type your message..." />
+      <button onclick="sendMessage()">Send</button>
+    `;
+
+    const chatRef = db.ref("messages/" + matchId);
+
+    chatRef.on("child_added", snap => {
+      const msg = snap.val();
+      const div = document.createElement("div");
+      div.textContent = msg.sender + ": " + msg.text;
+      document.getElementById("chatBox").appendChild(div);
+      document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
+    });
+
+    window.sendMessage = function () {
+      const input = document.getElementById("chatInput");
+      const text = input.value.trim();
+      if (text) {
+        chatRef.push({ sender: username, text });
+        input.value = "";
+      }
+    };
+  }
 </script>
 
 </body>
