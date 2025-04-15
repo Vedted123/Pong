@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Peer Chat</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+    #chatBox {
+      height: 300px;
+      overflow-y: scroll;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .msg {
+      margin: 5px 0;
+    }
+    .me {
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .other {
+      color: #555;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Peer Tutor Chat Room</h2>
+<div id="chatContainer">Loading chat...</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA9xmlbnn98hTKfWi5Of0OKHfy-nppTLNk",
+    authDomain: "peer-2bd22.firebaseapp.com",
+    databaseURL: "https://peer-2bd22-default-rtdb.firebaseio.com",
+    projectId: "peer-2bd22",
+    storageBucket: "peer-2bd22.appspot.com",
+    messagingSenderId: "871101246393",
+    appId: "1:871101246393:web:474ce51f90c8dff383a468"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+
+  const container = document.getElementById('chatContainer');
+
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      container.innerHTML = `
+        <p>You must be logged in to access the chat.</p>
+        <a href="index.html">Go to login</a>
+      `;
+      return;
+    }
+
+    const currentUser = user.email.split("@")[0];
+
+    db.ref("matches").once("value").then(snapshot => {
+      const matches = snapshot.val() || {};
+      let matchData = null;
+
+      for (let id in matches) {
+        const m = matches[id];
+        if (m.seekerName === currentUser || m.tutorName === currentUser) {
+          matchData = m;
+          break;
+        }
+      }
+
+      if (!matchData) {
+        container.innerHTML = `
+          <p>❌ No valid match found for <strong>${currentUser}</strong>.</p>
+          <a href="index.html">Return to home</a>
+        `;
+        return;
+      }
+
+      const chatId = `${matchData.seekerName}_${matchData.tutorName}`.replace(/\s+/g, '_');
+      container.innerHTML = `
+        <p>Chat between <strong>${matchData.seekerName}</strong> and <strong>${matchData.tutorName}</strong>. You are <strong>${currentUser}</strong>.</p>
+        <div id="chatBox"></div>
+        <input type="text" id="msgInput" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+      `;
+
+      const chatBox = document.getElementById('chatBox');
+
+      db.ref("chats/" + chatId).on("child_added", snap => {
+        const msg = snap.val();
+        const div = document.createElement('div');
+        div.classList.add('msg');
+        if (msg.sender === currentUser) {
+          div.innerHTML = `<span class="me">You:</span> ${msg.text}`;
+        } else {
+          div.innerHTML = `<span class="other">${msg.sender}:</span> ${msg.text}`;
+        }
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+
+      window.sendMessage = function () {
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        if (text) {
+          db.ref("chats/" + chatId).push({
+            sender: currentUser,
+            text: text,
+            timestamp: Date.now()
+          });
+          input.value = '';
+        }
+      };
+    });
+  });
+</script>
+
+</body>
+</html>
