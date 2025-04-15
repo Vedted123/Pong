@@ -2,14 +2,19 @@
 <html>
 <head>
   <title>Peer Tutor App</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <link rel="stylesheet" href="peerstyle.css" />
 </head>
 <body>
 
-<h2>Peer Tutor App</h2>
+<h1>PeerMatcher</h1>
+  <h3>"Connecting Students with Tutors for Academic Support"</h3>
+
+
 
 <div id="authBox" class="box">
   <h3>Login / Sign Up</h3>
@@ -26,7 +31,7 @@
   <div class="container">
     <div class="box">
       <h3>Register as Tutor</h3>
-      <input type="text" id="tutorGrade" placeholder="Enter your grade (e.g., 7)">
+      <input type="text" id="tutorGrade" placeholder="Enter your grade (For example, 7)">
       <select id="tutorSubject" onchange="toggleOther(this, 'tutorOther')">
         <option value="">Select Subject</option>
         <option value="Math">Math</option>
@@ -42,7 +47,7 @@
 
     <div class="box">
       <h3>Register as Help Seeker</h3>
-      <input type="text" id="seekerGrade" placeholder="Enter your grade (e.g., 6)">
+      <input type="text" id="seekerGrade" placeholder="Enter your grade (For example, 6)">
       <select id="seekerSubject" onchange="toggleOther(this, 'seekerOther')">
         <option value="">Select Subject</option>
         <option value="Math">Math</option>
@@ -83,12 +88,10 @@
         <thead><tr><th>Help Seeker</th><th>Subject</th><th>Grade</th><th>Tutor</th><th>Grade</th><th>Action</th></tr></thead>
         <tbody id="matchedList"></tbody>
       </table>
-      <a href="peerchat.html" id="chatBtn" style="display: none;" class="chat-button">Chat</a>
-
     </div>
   </div>
 </div>
 
-<script src="peerscript.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
